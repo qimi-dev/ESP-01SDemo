@@ -1,0 +1,108 @@
+C51 COMPILER V8.06   MAIN                                                                  05/13/2020 21:17:52 PAGE 1   
+
+
+C51 COMPILER V8.06, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: E:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <reg52.h>
+   2          
+   3          
+   4          bit uart_busy = 0;
+   5          
+   6          /* ----------------------
+   7                    延时5毫秒
+   8          ---------------------- */
+   9          void delay5ms() {
+  10   1          unsigned char a,b;
+  11   1          for(b=101;b>0;b--)
+  12   1              for(a=147;a>0;a--);
+  13   1      }
+  14          
+  15          /* ----------------------
+  16                    初始化串口，波特率9600
+  17          ---------------------- */
+  18          void Init_uart(void) {  
+  19   1              TMOD = TMOD | 0x20;    //定时器1工作在方式2  8位自动重装  
+  20   1              SCON = SCON | 0x50;    //串口1工作在方式1  10位异步收发 REN=1允许接收  
+  21   1              TH1 = 0xFd;            //定时器1初值  
+  22   1              TL1 = TH1;  
+  23   1              TR1 = 1;               //定时器1开始计数  
+  24   1              EA =1;                 //开总中断  
+  25   1              ES =1;                 //开串口1中断  
+  26   1      }
+  27          
+  28          
+  29          /* ----------------------
+  30                  串口发送数据方法
+  31          ---------------------- */
+  32          void Uart_SendByteData(unsigned char msg){
+  33   1              while(uart_busy); //等待上一个数据发送完成
+  34   1              SBUF=msg;                 
+  35   1              uart_busy = 1;   //串口发送置忙
+  36   1      }
+  37          void Uart_SendStrData(unsigned char *msg){
+  38   1              while(*msg){
+  39   2                      Uart_SendByteData(*msg++);
+  40   2              }
+  41   1      }
+  42          
+  43          
+  44          /* ----------------------
+  45                  初始化WIFI模块
+  46          ---------------------- */
+  47          void Init_ESP01S(){   
+  48   1              Uart_SendStrData("AT+CIPMUX=1\r\n");            // 设置多连接
+  49   1              delay5ms();   
+  50   1              Uart_SendStrData("AT+CIPSERVER=1,8080\r\n");      // 配置服务器，监听8080端口
+  51   1              delay5ms();
+  52   1      }
+  53          
+  54          
+C51 COMPILER V8.06   MAIN                                                                  05/13/2020 21:17:52 PAGE 2   
+
+  55          void main(){
+  56   1              Init_uart();
+  57   1              Init_ESP01S();    // Init_ESP01S 与 Init_uart调用的顺序不能改变
+  58   1              
+  59   1              while(1);
+  60   1      }
+  61          
+  62          
+  63          /* ----------------------
+  64                    串口中断
+  65          ---------------------- */
+  66          void UART_Interrupt(void) interrupt 4 {
+  67   1              unsigned char one_char;
+  68   1              
+  69   1              if(RI){
+  70   2                      one_char = SBUF;
+  71   2                      RI = 0;
+  72   2                      /* 解析ESP-01S发送到串口的数据 */
+  73   2              
+  74   2              }
+  75   1              
+  76   1              // 处理发送完成中断
+  77   1              if(TI){
+  78   2                      TI = 0;
+  79   2                      uart_busy = 0;
+  80   2              }
+  81   1              
+  82   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    121    ----
+   CONSTANT SIZE    =     36    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       4
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
